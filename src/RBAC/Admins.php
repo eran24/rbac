@@ -12,22 +12,20 @@ class Admins {
     public $table;
     public $register_status;
     public $validation;
-    public $user_session;
-    public $admin_session;
+    public $session_name;
 
     public $user;
 
 
     public function __construct()
     {
-        $this->ci = get_instance();
+        $this->ci =& get_instance();
         $this->db = &$this->ci->db;
-        $this->ci->load->model('users_model');
+        $this->ci->load->model('admins_model');
         $this->table = $this->ci->users_model->table;
         $this->register_status = true;
         $this->validation = true;
-        $this->user_session = 'user_id';
-        $this->admin_session = 'admin_id';
+        $this->session_name = 'admin_id';
         $this->user = new stdClass();
         $this->user->role = null;
         $this->user->permissions = array();

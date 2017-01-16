@@ -1,7 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-namespace rbac;
-
 class Rbac {
 
     private $ci;
@@ -17,7 +15,6 @@ class Rbac {
     public $errors;
     public $rules;
     
-    public $rbac_status;
     public $register_status;
     public $validation;
     public $user_session;
@@ -42,8 +39,7 @@ class Rbac {
         $this->rbac_status = true;
         $this->register_status = true;
         $this->validation = true;
-        
-        $this->session_name = 'admin_id';
+        $this->session_name = 'user_id';
         $this->row = new stdClass();
         $this->role = null;
         $this->permissions = array();
@@ -75,10 +71,21 @@ class Rbac {
             $this->errors = 'ایمیل یا گذرواژه اشتباه است';
             return false;
         }  
-        $row = $auth->row_array();
 
-        // set login setting
-        $this->set_login( $row['id'] );
+        // set user fileds
+        $this->_set_fields( $auth->row_array() );
+
+        // set user role
+        $this->_rbac_set_role();
+
+        // set user permissions
+        $this->_rbac_set_permissions();
+
+        // set user session
+        $this->_set_session();
+
+        //update user login date
+        $this->_set_login_date();
 
         return true;
     }
@@ -129,8 +136,6 @@ class Rbac {
         }
 
 
-        // set login setting
-        $this->set_login(  $user_id );
 
         return true;
     }
@@ -141,7 +146,7 @@ class Rbac {
 
     public function is_login()
     {
-        if( isset($this->row->id) ){
+        if( isset($this->user->id) ){
             return true;
         }
 
@@ -171,20 +176,20 @@ class Rbac {
 
     public function set_user_active($id)
     {
-        return $this->db->update($this->table_users, array('status' => 1), array('id' => $id));
+        return $this->db->update($this->table, array('status' => 1), array('id' => $id));
     }
 
 
     public function is_user_active($id)
     {
-        return ($this->row->status == 1)? true : false;
+        return ($this->user->status == 1)? true : false;
     }
 
 
 
     public function logout()
     {  
-        $this->row = new stdClass();
+        $this->user = new stdClass();
         $this->ci->session->unset_userdata($this->ci->user_session);
     }
 
@@ -213,6 +218,44 @@ class Rbac {
 
 
 
+    private function _set_fields(&$rows)
+    {
+        foreach($rows as $k => $v){
+            $this->user->{$k} = $v;
+        }
+    }
+
+
+
+    public function get_session()
+    {
+        return $this->ci->session->userdata($this->ci->user_session);
+    }
+
+
+    private function _set_session()
+    {
+        $this->ci->session->set_userdata(array($this->ci->user_session => $this->user->id));        
+    }
+
+
+
+
+    private function _set_login_date()
+    {
+        $this->db->update($this->table, array('login_date' => DATE), array('id' => $this->user->id));
+    }
+
+
+
+
+    public function errors()
+    {
+        return $this->errors;
+    }
+
+
+
 
     public static function create_hash()
     {
@@ -225,42 +268,6 @@ class Rbac {
     {
         $salt =  $this->ci->config->item('encryption_key');
         return sha1($str.$salt);
-    }
-
-
-
-
-    public function errors()
-    {
-        return $this->errors;
-    }
-
-
-    public function get_session()
-    {
-        return $this->ci->session->userdata($this->ci->user_session);
-    }
-
-
-
-
-    private function _set_session()
-    {
-        $this->ci->session->set_userdata(array($this->ci->user_session => $this->user->id));        
-    }
-
-
-    private function _set_fields(&$rows)
-    {
-        foreach($rows as $k => $v){
-            $this->user->{$k} = $v;
-        }
-    }
-
-
-    private function _set_login_date()
-    {
-        $this->db->update($this->table_users, array('login_date' => DATE), array('id' => $this->user->id));
     }
 
 
@@ -309,12 +316,12 @@ class Rbac {
                 array(
                         'field' => 'email',
                         'label' => 'ایمیل',
-                        'rules' => 'required|valid_email|is_unique['.$this->table_users.'.email]'
+                        'rules' => 'required|valid_email|is_unique['.$this->table.'.email]'
                 ),
                 array(
                         'field' => 'mobile',
                         'label' => 'موبایل',
-                        'rules' => 'required|trim|integer|exact_length[11]|regex_match[/^09[0-3][0-9]{8}$/]|is_unique['.$this->table_users.'.mobile]'
+                        'rules' => 'required|trim|integer|exact_length[11]|regex_match[/^09[0-3][0-9]{8}$/]|is_unique['.$this->table.'.mobile]'
                 ),
                 array(
                         'field' => 'captcha',
